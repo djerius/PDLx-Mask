@@ -50,19 +50,20 @@
 
 # DESCRIPTION
 
-    Typically PDL uses bad values to mark elements in a piddle which contain
-    invalid data. When multiple piddles should have the same elements marked
-    as invalid, a separate *mask* piddle (whose values are true for valid
-    data and false otherwise) is used.
+Typically PDL uses bad values to mark elements in a piddle which
+contain invalid data. When multiple piddles should have the same
+elements marked as invalid, a separate \*mask\* piddle (whose values are
+true for valid data and false otherwise) is used.
 
-    PDLx::Mask in concert with PDLx::MaskedData simplifies the management of
-    mutiple piddles sharing the same mask. PDLx::Mask is the shared mask,
-    and PDLx::MaskedData is a specialized piddle which will dynamically
-    respond to changes in the mask, so that they are always up-to-date.
+PDLx::Mask in concert with PDLx::MaskedData simplifies the management
+of mutiple piddles sharing the same mask. PDLx::Mask is the shared
+mask, and PDLx::MaskedData is a specialized piddle which will
+dynamically respond to changes in the mask, so that they are always
+up-to-date.
 
-    Additionally, invalid elements in the data piddles may be added to the
-    shared mask, so that there is a consistent view of valid elements across
-    all piddles.
+Additionally, invalid elements in the data piddles may be added to the
+shared mask, so that there is a consistent view of valid elements
+across all piddles.
 
 # LICENSE AND COPYRIGHT
 
