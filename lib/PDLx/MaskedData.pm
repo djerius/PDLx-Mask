@@ -552,7 +552,7 @@ and cached.
 
 Update the I<effective> data. This should never be required by user code.
 
-If C<$data->upstream_mask> is true, C<$data->mask->update> is called,
+If C<< $data->upstream_mask >> is true, C<< $data->mask->update >> is called,
 otherwise the result of applying the mask to the I<base> data is
 stored as the I<effective> data.
 
