@@ -181,6 +181,15 @@ sub BUILD {
 
 }
 
+sub DEMOLISH {
+
+    my ( $self, $in_global_destruction ) = @_;
+
+    return if $in_global_destruction;
+
+    $self->_unsubscribe;
+}
+
 sub _trigger_subscribe_to_mask {
 
     my $self = shift;
@@ -625,6 +634,8 @@ Diab Jerius  E<lt>djerius@cpan.orgE<gt>
 =head3 BUILD
 
 =head3 BUILDARGS
+
+=head3 DEMOLISH
 
 =head3 PDL
 
