@@ -109,11 +109,12 @@ sub subscribe {
 
     my $tmpl = {
         apply_mask => {
-		       required => 1,
-		       allow   => sub { is_coderef( $_[0] ) },
+            defined => 0,
+            allow   => sub { is_coderef( $_[0] ) },
         },
         data_mask => {
-		      allow   => [ [ undef, sub { is_coderef( $_[0] ) } ], ],
+            defined => 0,
+            allow   => sub { is_coderef( $_[0] ) },
         },
 
 	token => {
@@ -124,6 +125,9 @@ sub subscribe {
 
     my $opts = check( $tmpl, {@_} )
       or die Params::Check::last_error();
+
+    croak( "must specify one or more of <apply_mask> or <data_mask>\n" )
+      unless defined $opts->{apply_mask} || defined $opts->{data_mask};
 
     my $token = delete $opts->{token};
     croak( "passed invalid token" )
@@ -180,7 +184,9 @@ sub update {
 
     # now push new mask
     $_->{apply_mask}->( $self->PDL )
-      foreach values %{ $self->subscribers };
+      foreach
+	grep { defined $_->{apply_mask} }
+	  values %{ $self->subscribers };
 
     return;
 }
@@ -387,7 +393,7 @@ The following options are available:
 =item C<apply_mask> => I<code reference>
 
 This subroutine should take a single argument (a mask piddle) and
-apply it.  It should I<not> alter the mask piddle.  It is required.
+apply it.  It should I<not> alter the mask piddle.  It is optional.
 
 =item C<data_mask> => I<code reference>
 

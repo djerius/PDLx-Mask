@@ -101,8 +101,8 @@ subtest "subscribe" => sub {
 
     like(
         exception { PDLx::Mask->new( 1 )->subscribe() },
-        qr/not provided/,
-        "missing apply_mask",
+        qr/one or more of/,
+        "no apply_mask or data_mask",
     );
 
     like(
@@ -112,9 +112,7 @@ subtest "subscribe" => sub {
     );
 
     like(
-        exception {
-            PDLx::Mask->new( 1 )
-              ->subscribe( apply_mask => sub { }, data_mask => 0 )
+        exception { PDLx::Mask->new( 1 ) ->subscribe( data_mask => 0 )
         },
         qr/data_mask.*invalid type/,
         "illegal data_mask",
@@ -131,8 +129,7 @@ subtest "subscribe" => sub {
     subtest "mask reflects subscription" => sub   {
 
 	my $mask = PDLx::Mask->new( [ 1, 0, 1 ] );
-	$mask->subscribe( apply_mask => sub {},
-			  data_mask => sub { [ 0, 0, 0 ] },
+	$mask->subscribe( data_mask => sub { [ 0, 0, 0 ] },
 			);
 	cmp_deeply( $mask->unpdl, [ 0, 0, 0 ], "mask value" );
 
@@ -146,8 +143,7 @@ subtest 'overload assignment ops/methods' => sub {
         {
 	    # copying returns a normal piddle
 	    my $mask = PDLx::Mask->new( [ 1, 0, 1 ] );
-	    $mask->subscribe( apply_mask => sub {},
-			      data_mask => sub { [ 1, 0, 0 ] },
+	    $mask->subscribe( data_mask => sub { [ 1, 0, 0 ] },
 			    );
 	    my $copy = $mask->copy;
 
