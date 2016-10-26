@@ -321,11 +321,36 @@ sub _clear_summary {
 
 }
 
-before 'mask' => sub {
+around 'mask' => sub {
 
-    return if @_ == 1;
+    my $orig = shift;
+    my @args = @_;
 
-    $_[0]->_unsubscribe;
+    my $self = $_[0];
+
+    my $original_token = $self->_token;
+    $self->_clear_token;
+
+    my $rval;
+    try {
+	my $original_mask = $self->{mask};
+
+	$rval = $orig->( @args );
+
+	# only unsubscribe if we've successfully added
+	# the new mask
+
+	$original_mask->unsubscribe( $original_token )
+	  if @args > 1 && defined $original_token;
+
+    } catch {
+
+	$self->_set__token( $original_token )
+	  if defined $original_token;
+
+    };
+
+    return $rval;
 
 };
 
