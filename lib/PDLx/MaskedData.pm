@@ -90,7 +90,7 @@ has mask => (
         my $self = shift;
 
         $self->mask(
-              $self->upstream_mask
+              $self->data_mask
             ? $self->_data_mask
             : PDL->ones( PDL::byte, $self->shape ) );
 
@@ -106,7 +106,7 @@ has mask_value => (
     default => 0,
 );
 
-has upstream_mask => (
+has data_mask => (
     is      => 'rw',
     default => 0,
     trigger   => \&_trigger_subscribe_to_mask,
@@ -209,7 +209,7 @@ sub _subscribe {
     my $token = $self->mask->subscribe(
         apply_mask => sub { $self->_apply_mask( @_ ) },
         (
-            $self->upstream_mask
+            $self->data_mask
             ? ( data_mask => sub { $self->_data_mask } )
             : ()
         ),
@@ -434,7 +434,7 @@ PDLx::MaskedData - Automatically synchronize data and valid data masks
   say $data1;    # [0 1 2 BAD 4 5 6 7 8]
 
   # push invalid values upstream to the shared mask
-  $data1->upstream_mask(1);
+  $data1->data_mask(1);
   $data1->setbadat(0);
   say $data1;    # [BAD 1 2 BAD 4 5 6 7 8]
 
@@ -521,10 +521,10 @@ not specified, all data elements are valid.
 If the piddle's bad flag is not set, this specifies the value of
 invalid elements in the I<effective> data.  It defaults to C<0>.
 
-=item C<upstream_mask> => I<boolean>
+=item C<data_mask> => I<boolean>
 
 If true, any invalid elements in the I<base> data are replicated
-in the mask.
+in the mask.  It defaults to false.
 
 =back
 
@@ -577,7 +577,7 @@ and cached.
 
 Update the I<effective> data. This should never be required by user code.
 
-If C<< $data->upstream_mask >> is true, C<< $data->mask->update >> is called,
+If C<< $data->data_mask >> is true, C<< $data->mask->update >> is called,
 otherwise the result of applying the mask to the I<base> data is
 stored as the I<effective> data.
 
