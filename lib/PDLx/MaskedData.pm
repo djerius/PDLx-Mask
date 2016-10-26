@@ -481,7 +481,7 @@ PDLx::MaskedData - Automatically synchronize data and valid data masks
 Typically L<PDL> uses L<bad values|PDL::Bad> to mark elements in a
 piddle which contain invalid data.  When multiple piddles should have
 the same elements marked as invalid, a separate I<mask> piddle (whose
-values are true for valid data and false otherwise) is used.
+values are true for valid data and false otherwise) is often used.
 
 B<PDLx::MaskedData> (in concert with L<PDLx::Mask>) simplifies the
 management of mutiple piddles sharing the same mask.  B<PDLx::Mask> is

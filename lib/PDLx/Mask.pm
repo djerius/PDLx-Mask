@@ -287,7 +287,7 @@ PDLx::Mask - Mask multiple piddles with automatic two way feedback
 Typically L<PDL> uses L<bad values|PDL::Bad> to mark elements in a piddle which
 contain invalid data.  When multiple piddles should have the same elements
 marked as invalid, a separate I<mask> piddle (whose values are true for valid data
-and false otherwise) is used.
+and false otherwise) is often used.
 
 B<PDLx::Mask> in concert with L<PDLx::MaskedData> simplifies the management of
 mutiple piddles sharing the same mask.  B<PDLx::Mask> is the shared mask,
@@ -320,7 +320,7 @@ invalid elements from the data piddles.
 
 =back
 
-The B<subscribe> method is used to register callbacks to be invoked
+The L<< B<subscribe>|/subscribe >> method is used to register callbacks to be invoked
 when the mask has been changed. Multiple subscriptions are allowed; each
 can register two callbacks:
 
@@ -334,7 +334,7 @@ containing the mask.  It should not alter it.
 =item *
 
 A subroutine which will return a data mask.  If the data mask changes,
-it I<must> call the mask's L<< B<update>|/update >> method.
+the mask's L<< B<update>|/update >> method I<must> be called.
 
 =back
 
@@ -401,6 +401,10 @@ apply it.  It should I<not> alter the mask piddle.  It is optional.
 
 This subroutine should return a piddle which encodes the intrinsic
 valid elements of the object's data.  It is optional.
+
+The mask object does not monitor this piddle for changes.  If the data
+mask changes, the mask's L<< B<update>|/update >> method I<must> be
+called.
 
 =item token => I<scalar>
 
@@ -476,8 +480,8 @@ I<effective> mask will automatically be updated.
 
 =head2 Secondary Masks
 
-Sometimes you'd like for the primary mask to incorporate a secondary
-mask that's not associated with a data set. Here's how to do that:
+Sometimes the primary mask should incorporate a secondary mask that's
+not associated with a data set. Here's how to do that:
 
   $pmask = PDLx::Mask->new( pdl( byte, 1, 1, 1 ) );
   $smask = PDLx::MaskedData->new( base => pdl( byte, 0, 1, 0 ),
@@ -486,9 +490,9 @@ mask that's not associated with a data set. Here's how to do that:
                                   data_mask => 1
                                 );
 
-The key difference between this and an ordinary dependency on
-a data mask, is that by turning off C<apply_mask>, changes to C<$pmask>
-won't be replicated in C<$smask>.
+The key difference between this and an ordinary dependency on a data
+mask, is that by turning off C<apply_mask>, changes in the primary
+mask won't be replicated in the secondary.
 
   say $smask;       # [ 0 1 0 ]
   say $pmask->base; # [ 1 1 1 ]
