@@ -65,7 +65,7 @@ has base => (
     is       => 'ro',
     required => 1,
     coerce   => sub {
-        return  topdl( $_[0] )->byte;
+        return topdl( $_[0] )->byte;
     },
 );
 
@@ -117,9 +117,9 @@ sub subscribe {
             allow   => sub { is_coderef( $_[0] ) },
         },
 
-	token => {
-		  default => undef,
-		 }
+        token => {
+            default => undef,
+          }
 
     };
 
@@ -143,11 +143,11 @@ sub subscribe {
 
 sub unsubscribe {
 
-    my $self = shift;
+    my $self  = shift;
     my $token = shift;
 
     croak( "passed invalid token" )
-      if ! defined $token || !exists $self->subscribers->{$token};
+      if !defined $token || !exists $self->subscribers->{$token};
 
     delete $self->subscribers->{$token};
 
@@ -167,7 +167,7 @@ sub update {
 
         $self->clear_nvalid;
 
-	next unless defined $sub->{data_mask};
+        next unless defined $sub->{data_mask};
 
         $mask //= $self->{base}->copy;
         $mask &= $sub->{data_mask}->();
@@ -356,14 +356,16 @@ copy the passed piddle.
 
   $base = $mask->base;
 
-This returns the I<base> mask. Don't Alter This!
+This returns the I<base> mask.
+B<Don't alter the returned piddle!>
 
 =head3 mask
 
   $pdl = $mask->mask;
   $pdl = $mask->mask( $new_mask );
 
-Return the I<effective> mask as a plain piddle.  Don't Alter This!
+Return the I<effective> mask as a plain piddle.
+B<Don't alter the returned piddle!>
 
 If passed a piddle, it is copied to the I<base> mask and the
 L<< B<update>|/update >> method is called.
@@ -469,6 +471,38 @@ I<should> be fatal.
 
 These operators may be used to update the I<base> mask.  The
 I<effective> mask will automatically be updated.
+
+=head1 EXAMPLES
+
+=head2 Secondary Masks
+
+Sometimes you'd like for the primary mask to incorporate a secondary
+mask that's not associated with a data set. Here's how to do that:
+
+  $pmask = PDLx::Mask->new( pdl( byte, 1, 1, 1 ) );
+  $smask = PDLx::MaskedData->new( base => pdl( byte, 0, 1, 0 ),
+                                  mask => $pmask,
+                                  apply_mask => 0,
+                                  data_mask => 1
+                                );
+
+The key difference between this and an ordinary dependency on
+a data mask, is that by turning off C<apply_mask>, changes to C<$pmask>
+won't be replicated in C<$smask>.
+
+  say $smask;       # [ 0 1 0 ]
+  say $pmask->base; # [ 1 1 1 ]
+  say $pmask;       # [ 0 1 0 ]
+
+  $smask->set( 0, 1 );
+  say $smask;       #  [ 1 1 0 ]
+  say $pmask->base; #  [ 1 1 1 ]
+  say $pmask;       #  [ 1 1 0 ]
+
+  $pmask->set( 0, 0 );
+  say $smask;       #  [ 1 1 0 ]
+  say $pmask->base; #  [ 0 1 1 ]
+  say $pmask;       #  [ 0 1 0 ]
 
 
 =head1 BUGS AND LIMITATIONS

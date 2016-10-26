@@ -31,7 +31,9 @@ our $VERSION = '0.01';
 
 use Params::Check qw[ check ];
 use Ref::Util ':all';
+use Scalar::Util qw[ refaddr ];
 use Safe::Isa;
+use Try::Tiny;
 
 use PDL::Core ':Internal';
 use Package::Stash;
@@ -112,6 +114,12 @@ has data_mask => (
     trigger => \&_trigger_mask_subscription,
 );
 
+has apply_mask => (
+    is      => 'rw',
+    default => 1,
+    trigger => 1,
+);
+
 has dsum => (
     is        => 'lazy',
     init_args => undef,
@@ -168,14 +176,9 @@ sub BUILD {
 
     my $self = shift;
 
-    $self->_set_PDL( $self->base->copy );
-
     $self->_set__pre_build( 0 );
 
-    # trigger update if mask has been provided, as
-    # _trigger_mask checks if it's in pre-build and
-    # won't fire
-
+    $self->_set_effective_data_storage;
     $self->_subscribe;
 
 }
@@ -186,7 +189,19 @@ sub DEMOLISH {
 
     return if $in_global_destruction;
 
-    $self->_unsubscribe;
+    $self->mask->unsubscribe( $self->_token )
+      if $self->_has_token;
+}
+
+sub _trigger_apply_mask {
+
+    my $self = shift;
+
+    # don't trigger in the constructor
+    return if $self->_pre_build;
+
+    $self->_subscribe;
+
 }
 
 sub _trigger_mask_subscription {
@@ -194,7 +209,35 @@ sub _trigger_mask_subscription {
     my $self = shift;
 
     # don't trigger in the constructor
-    $self->_subscribe unless $self->_pre_build;
+    return if $self->_pre_build;
+
+    $self->_subscribe;
+
+    return;
+}
+
+
+sub _set_effective_data_storage {
+
+    my $self = shift;
+
+    # don't trigger in the constructor
+    return if $self->_pre_build;
+
+    # if apply_mask is 1, $self->PDL must be set to a copy
+    # of $self->base, but only not already done so if required.
+
+    if ( $self->apply_mask && $self->has_mask ) {
+
+	$self->_set_PDL( $self->base->copy )
+	  if refaddr( $self->base ) == refaddr( $self->PDL );
+    }
+
+    # otherwise, save some space.
+    else {
+
+	$self->_set_PDL( $self->base )
+    }
 
     return;
 }
@@ -205,11 +248,17 @@ sub _subscribe {
 
     return unless $self->has_mask;
 
+    $self->_set_effective_data_storage;
+
     my $token = $self->mask->subscribe(
-        apply_mask => sub { $self->_apply_mask( @_ ) },
+        (
+            $self->apply_mask
+            ? ( apply_mask => sub { $self->_apply_mask( @_ ) } )
+            : (),
+        ),
         (
             $self->data_mask
-            ? ( data_mask => sub { $self->_data_mask } )
+	    ? ( data_mask => sub { $self->_data_mask } )
             : ()
         ),
         ( $self->_has_token ? ( token => $self->_token ) : () ),
@@ -222,18 +271,6 @@ sub _subscribe {
     return;
 }
 
-sub _unsubscribe {
-
-    my $self = shift;
-
-    return unless $self->_has_token;
-
-    $self->mask->unsubscribe( $self->_token );
-    $self->_clear_token;
-    $self->clear_mask;
-
-    return;
-}
 
 sub _apply_mask {
 
@@ -270,22 +307,18 @@ sub update {
 
     my $self = shift;
 
-    if ( $self->has_mask ) {
+    return unless $self->has_mask;
 
-	if ( $self->upstream_mask ) {
+    if ( $self->data_mask ) {
 
-	    $self->mask->update;
-	}
-
-	else {
-
-	    $self->_apply_mask( $self->mask );
-
-	}
+	# this will automatically apply the mask if required
+	$self->mask->update;
     }
-    else {
 
-	$self->_set_PDL( $self->base->copy );
+    elsif ( $self->apply_mask ) {
+
+	$self->_apply_mask( $self->mask );
+
     }
 
     return;
@@ -519,6 +552,11 @@ not specified, all data elements are valid.
 
 If the piddle's bad flag is not set, this specifies the value of
 invalid elements in the I<effective> data.  It defaults to C<0>.
+
+=item C<apply_mask> => I<boolean>
+
+If true, the mask is applied to the data.  This defaults to true.
+See L<PDlx::Mask/EXAMPLES> for an application.
 
 =item C<data_mask> => I<boolean>
 

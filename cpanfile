@@ -10,6 +10,8 @@ requires 'Safe::Isa';
 requires 'Package::Stash';
 requires 'Data::GUID';
 requires 'PDLx::DetachedObject';
+requires 'Try::Tiny';
+requires 'Scalar::Util';
 
 on test => sub {
    requires 'Test::More';
