@@ -46,7 +46,7 @@ extends 'PDLx::DetachedObject';
 
 with 'PDLx::Role::RestrictedPDL';
 
-sub _trigger_subscribe_to_mask;
+sub _trigger_mask_subscription;
 
 use overload
   map {
@@ -97,8 +97,8 @@ has mask => (
         return $self->mask;
     },
     predicate => 1,
-    clearer => 1,
-    trigger   => \&_trigger_subscribe_to_mask,
+    clearer   => 1,
+    trigger   => \&_trigger_mask_subscription,
 );
 
 has mask_value => (
@@ -109,11 +109,10 @@ has mask_value => (
 has data_mask => (
     is      => 'rw',
     default => 0,
-    trigger   => \&_trigger_subscribe_to_mask,
+    trigger => \&_trigger_mask_subscription,
 );
 
 has dsum => (
-
     is        => 'lazy',
     init_args => undef,
     clearer   => 'clear_dsum',
@@ -129,7 +128,7 @@ has _token => (
     is        => 'rwp',
     init_args => undef,
     predicate => 1,
-    clearer => 1,
+    clearer   => 1,
 );
 
 # PDL requires subclasses to have a PDL attribute, but it shouldn't be
@@ -190,7 +189,7 @@ sub DEMOLISH {
     $self->_unsubscribe;
 }
 
-sub _trigger_subscribe_to_mask {
+sub _trigger_mask_subscription {
 
     my $self = shift;
 
@@ -532,7 +531,8 @@ in the mask.  It defaults to false.
 
   $base = $data->base;
 
-This returns the I<base> data. Don't Alter This!
+This returns the I<base> data.
+B<Don't alter the returned piddle!>
 
 =head3 data
 
@@ -618,7 +618,6 @@ invokes the L<< B<update>|/update >> method.
 This is a lazily evaluated and cached version of the L<< B<PDL>
 dsum|PDL::Ufunc/dsum >> method.
 
-
 =head1 BUGS AND LIMITATIONS
 
 Please report any bugs or feature requests to
@@ -667,4 +666,3 @@ Diab Jerius  E<lt>djerius@cpan.orgE<gt>
 =head3 has_mask
 
 =end fakeout_pod_coverage
-
