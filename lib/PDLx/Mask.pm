@@ -148,7 +148,11 @@ sub unsubscribe {
     croak( "passed invalid token" )
       if !defined $token || !exists $self->subscribers->{$token};
 
+    my $data_mask = delete $self->subscribers->{$token}{data_mask};
+
     delete $self->subscribers->{$token};
+
+    $self->update if $data_mask;
 
     return;
 }

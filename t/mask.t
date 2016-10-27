@@ -129,9 +129,12 @@ subtest "subscribe" => sub {
     subtest "mask reflects subscription" => sub   {
 
 	my $mask = PDLx::Mask->new( [ 1, 0, 1 ] );
-	$mask->subscribe( data_mask => sub { [ 0, 0, 0 ] },
-			);
+	my $token = $mask->subscribe( data_mask => sub { [ 0, 0, 0 ] } );
 	cmp_deeply( $mask->unpdl, [ 0, 0, 0 ], "mask value" );
+
+	$mask->unsubscribe( $token );
+
+	cmp_deeply( $mask->unpdl, $mask->base->unpdl, "effective mask == base mask upon unsubscription" );
 
     };
 
