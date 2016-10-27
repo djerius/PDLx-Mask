@@ -25,7 +25,7 @@ use strict;
 use warnings;
 use Carp;
 
-use 5.10.0;
+use v5.10;
 
 our $VERSION = '0.01';
 
@@ -107,7 +107,7 @@ sub subscribe {
 
     my $self = shift;
 
-    my $tmpl = {
+    state $tmpl = {
         apply_mask => {
             defined => 0,
             allow   => sub { is_coderef( $_[0] ) },
@@ -120,7 +120,6 @@ sub subscribe {
         token => {
             default => undef,
           }
-
     };
 
     my $opts = check( $tmpl, {@_} )
