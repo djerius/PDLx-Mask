@@ -238,14 +238,14 @@ sub _reset_effective_data_storage {
 
     if ( $self->apply_mask && $is_subscribed ) {
 
-	$self->_set_PDL( $self->base->copy )
-	  if $self->_has_shared_data_storage;
+        $self->_set_PDL( $self->base->copy )
+          if $self->_has_shared_data_storage;
     }
 
     # otherwise, save some space.
     else {
 
-	$self->_set_PDL( $self->base )
+        $self->_set_PDL( $self->base );
     }
 
     return;
@@ -320,8 +320,7 @@ sub subscribe {
             : (),
         ),
         (
-            $self->data_mask
-	    ? ( data_mask => sub { $self->_data_mask } )
+            $self->data_mask ? ( data_mask => sub { $self->_data_mask } )
             : ()
         ),
         ( $self->_has_token ? ( token => $self->_token ) : () ),
@@ -340,9 +339,10 @@ sub unsubscribe {
 
     return unless $self->is_subscribed;
 
-    state $tmpl = {
-		   reset_data_storage => { default => 1, strict_type => 1, defined => 1 }
-		  };
+    state $tmpl
+      = {
+        reset_data_storage => { default => 1, strict_type => 1, defined => 1 }
+      };
 
     my $opts = check( $tmpl, {@_} )
       or die Params::Check::last_error();
@@ -360,7 +360,6 @@ sub unsubscribe {
 
     return;
 }
-
 
 sub _apply_mask {
 
@@ -400,24 +399,24 @@ sub update {
     # a mask is involved
     if ( $self->is_subscribed ) {
 
-	if ( $self->data_mask ) {
+        if ( $self->data_mask ) {
 
-	    # this will automatically apply the mask if required
-	    $self->mask->update;
-	}
+            # this will automatically apply the mask if required
+            $self->mask->update;
+        }
 
-	elsif ( $self->apply_mask ) {
+        elsif ( $self->apply_mask ) {
 
-	    $self->_apply_mask( $self->mask );
-	}
+            $self->_apply_mask( $self->mask );
+        }
 
     }
 
     # no mask, but PDL & base don't share storage
 
-    elsif ( ! $self->_has_shared_data_storage ) {
+    elsif ( !$self->_has_shared_data_storage ) {
 
-	$self->{PDL} .= $self->base;
+        $self->{PDL} .= $self->base;
     }
 
     return;
