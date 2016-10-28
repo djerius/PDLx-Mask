@@ -511,6 +511,32 @@ mask won't be replicated in the secondary.
   say $pmask->base; #  [ 0 1 1 ]
   say $pmask;       #  [ 0 1 0 ]
 
+=head2 Intermittant Secondary Masks
+
+Building upon the previous example, let's say the secondary mask is
+used intermittently.  For example
+
+  $pmask = PDLx::Mask->new( [ 1, 1, 1 ] );
+
+  $smask = PDLx::MaskedData->new( base => [ 0, 1, 0 ],
+                                  mask => $pmask,
+                                  apply_mask => 0,
+                                  data_mask => 1
+                                );
+
+  $data = PDLx::MaskedData->new( [ 33, 22, 44 ], $pmask );
+
+  say $data         #  [ 0, 22, 0 ]
+
+  # now want to ignore secondary mask
+  $smask->unsubscribe;
+
+  say $data         #  [ 33, 22, 44 ]
+
+  # and now stop ignoring it
+  $smask->subscribe;
+  say $data         #  [ 0, 22, 0 ]
+
 
 =head1 BUGS AND LIMITATIONS
 

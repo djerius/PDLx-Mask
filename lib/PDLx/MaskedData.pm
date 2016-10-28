@@ -178,8 +178,8 @@ sub BUILD {
 
     $self->_set__pre_build( 0 );
 
-    $self->_set_effective_data_storage;
-    $self->_subscribe;
+    $self->_reset_effective_data_storage;
+    $self->subscribe;
 
 }
 
@@ -200,7 +200,7 @@ sub _trigger_apply_mask {
     # don't trigger in the constructor
     return if $self->_pre_build;
 
-    $self->_subscribe;
+    $self->subscribe;
 
 }
 
@@ -211,26 +211,35 @@ sub _trigger_mask_subscription {
     # don't trigger in the constructor
     return if $self->_pre_build;
 
-    $self->_subscribe;
+    $self->subscribe;
 
     return;
 }
 
 
-sub _set_effective_data_storage {
+sub _has_shared_data_storage {
 
-    my $self = shift;
+    return refaddr( $_[0]->base ) == refaddr( $_[0]->PDL );
+
+}
+
+
+sub _reset_effective_data_storage {
+
+    my ( $self, $is_subscribed ) = @_;
+
+    $is_subscribed //= $self->is_subscribed;
 
     # don't trigger in the constructor
     return if $self->_pre_build;
 
     # if apply_mask is 1, $self->PDL must be set to a copy
-    # of $self->base, but only not already done so if required.
+    # of $self->base, but only if not already done.
 
-    if ( $self->apply_mask && $self->has_mask ) {
+    if ( $self->apply_mask && $is_subscribed ) {
 
 	$self->_set_PDL( $self->base->copy )
-	  if refaddr( $self->base ) == refaddr( $self->PDL );
+	  if $self->_has_shared_data_storage;
     }
 
     # otherwise, save some space.
@@ -242,13 +251,22 @@ sub _set_effective_data_storage {
     return;
 }
 
-sub _subscribe {
+sub is_subscribed {
+
+    return $_[0]->has_mask && $_[0]->_has_token;
+    return $_[0]->has_mask;
+
+}
+
+sub subscribe {
 
     my $self = shift;
 
     return unless $self->has_mask;
 
-    $self->_set_effective_data_storage;
+    # override is_subscribed to ensure $self->PDL is a copy of
+    # $self->base
+    $self->_reset_effective_data_storage( 1 );
 
     my $token = $self->mask->subscribe(
         (
@@ -265,6 +283,30 @@ sub _subscribe {
     );
 
     $self->_set__token( $token );
+
+    $self->update;
+
+    return;
+}
+
+sub unsubscribe {
+
+    my $self = shift;
+
+    return unless $self->is_subscribed;
+
+    state $tmpl = {
+		   reset_data_storage => { default => 1, strict_type => 1, defined => 1 }
+		  };
+
+    my $opts = check( $tmpl, {@_} )
+      or die Params::Check::last_error();
+
+    $self->mask->unsubscribe( $self->_token );
+    $self->_clear_token;
+
+    $self->_reset_effective_data_storage
+      if $opts->{reset_data_storage};
 
     $self->update;
 
@@ -307,18 +349,27 @@ sub update {
 
     my $self = shift;
 
-    return unless $self->has_mask;
+    # a mask is involved
+    if ( $self->is_subscribed ) {
 
-    if ( $self->data_mask ) {
+	if ( $self->data_mask ) {
 
-	# this will automatically apply the mask if required
-	$self->mask->update;
+	    # this will automatically apply the mask if required
+	    $self->mask->update;
+	}
+
+	elsif ( $self->apply_mask ) {
+
+	    $self->_apply_mask( $self->mask );
+	}
+
     }
 
-    elsif ( $self->apply_mask ) {
+    # no mask, but PDL & base don't share storage
 
-	$self->_apply_mask( $self->mask );
+    elsif ( ! $self->_has_shared_data_storage ) {
 
+	$self->{PDL} .= $self->base;
     }
 
     return;
@@ -353,37 +404,12 @@ sub _clear_summary {
 
 }
 
-around 'mask' => sub {
+before 'mask' => sub {
 
-    my $orig = shift;
-    my @args = @_;
+    my $self = shift;
 
-    my $self = $_[0];
-
-    my $original_token = $self->_token;
-    $self->_clear_token;
-
-    my $rval;
-    try {
-	my $original_mask = $self->{mask};
-
-	$rval = $orig->( @args );
-
-	# only unsubscribe if we've successfully added
-	# the new mask
-
-	$original_mask->unsubscribe( $original_token )
-	  if @args > 1 && defined $original_token;
-
-    } catch {
-
-	$self->_set__token( $original_token )
-	  if defined $original_token;
-
-    };
-
-    return $rval;
-
+    $self->unsubscribe( reset_data_storage => 0 )
+      if @_;
 };
 
 # override methods
@@ -556,7 +582,7 @@ invalid elements in the I<effective> data.  It defaults to C<0>.
 =item C<apply_mask> => I<boolean>
 
 If true, the mask is applied to the data.  This defaults to true.
-See L<PDlx::Mask/EXAMPLES> for an application.
+See L<PDlx::Mask/EXAMPLES/Secondary Masks> for an application.
 
 =item C<data_mask> => I<boolean>
 
@@ -618,6 +644,38 @@ Update the I<effective> data. This should never be required by user code.
 If C<< $data->data_mask >> is true, C<< $data->mask->update >> is called,
 otherwise the result of applying the mask to the I<base> data is
 stored as the I<effective> data.
+
+=head3 subscribe
+
+  $data->subscribe;
+
+Subscribe to C<$data>'s mask.  Usually this is not necessary; see
+L<PDLx-Mask/EXAMPLES/Intermittant Secondary Masks> for why this might be useful.
+
+=head3 unsubscribe
+
+  $data->unsubscribe( %options );
+
+Subscribe to C<$data>'s mask.  Usually this is not necessary; see
+L<PDLx-Mask/EXAMPLES/Intermittant Secondary Masks> for why this might be useful.
+
+Options:
+
+=over
+
+=item C<reset_data_storage> => I<boolean>
+
+If true (the default), memory used to store the I<effective> data is
+reclaimed if possible.  If C<$data> will be resubscribed to a mask,
+it's more efficient to not perform this step.
+
+=back
+
+=head3 is_subscribed
+
+  $bool = $data->is_subscribed;
+
+Returns true if C<$data> is subscribed to its mask.
 
 =head2 Overridden methods
 
