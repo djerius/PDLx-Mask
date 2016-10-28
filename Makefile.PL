@@ -9,8 +9,8 @@ license 'gpl3';
 auto_license( holder => 'Smithsonian Astrophysical Observatory' );
 all_from 'lib/PDLx/Mask.pm';
 
-readme_from 'docs/README.pod';
-readme_from 'docs/README.pod', { format => 'md' };;
+readme_from 'docs/README.src';
+readme_from 'docs/README.src', { format => 'md' };;
 
 author_tests( 'xt' );
 
