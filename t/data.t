@@ -411,58 +411,126 @@ subtest "secondary mask" => sub {
 
 subtest "subscription follies" => sub {
 
-  my $mask = PDLx::Mask->new( pdl( byte, 1, 0, 1, 1 ) );
+    subtest "data directed" => sub {
 
-  my $data  = PDLx::MaskedData->new( base => pdl( 1, 1, 0, 0 ),
-				     mask => $mask,
-				     apply_mask => 1,
-				     data_mask => 1,
-				   );
+        my $mask = PDLx::Mask->new( pdl( byte, 1, 0, 1, 1 ) );
 
-  cmp_deeply( $data->unpdl, [ 1, 0, 0, 0 ], "effective data initial value" );
-  cmp_deeply( $mask->unpdl, [ 1, 0, 0, 0 ], "mask tracks initial data mask" );
+        my $data = PDLx::MaskedData->new(
+            base       => pdl( 1, 1, 0, 0 ),
+            mask       => $mask,
+            apply_mask => 1,
+            data_mask  => 1,
+        );
 
-  $data->set( 2, 2 );
-  cmp_deeply( $data->base->unpdl, [ 1, 1, 2, 0 ], "base data updated value" );
-  cmp_deeply( $data->unpdl,       [ 1, 0, 2, 0 ], "effective data updated value" );
-  cmp_deeply( $mask->unpdl,       [ 1, 0, 1, 0 ], "mask tracks updated data mask" );
+        cmp_deeply(
+            $data->unpdl,
+            [ 1, 0, 0, 0 ],
+            "effective data initial value"
+        );
+        cmp_deeply(
+            $mask->unpdl,
+            [ 1, 0, 0, 0 ],
+            "mask tracks initial data mask"
+        );
+
+        $data->set( 2, 2 );
+        cmp_deeply(
+            $data->base->unpdl,
+            [ 1, 1, 2, 0 ],
+            "base data updated value"
+        );
+        cmp_deeply(
+            $data->unpdl,
+            [ 1, 0, 2, 0 ],
+            "effective data updated value"
+        );
+        cmp_deeply(
+            $mask->unpdl,
+            [ 1, 0, 1, 0 ],
+            "mask tracks updated data mask"
+        );
 
 
-  subtest "unsubscribe, no reset" => sub {
+        subtest "unsubscribe, no reset" => sub {
 
-      # unsubscribe, keeping effective and base data separate; can't test
-      # if that's true unless we peek behind the curtain
+            # unsubscribe, keeping effective and base data separate; can't test
+            # if that's true unless we peek behind the curtain
 
-      $data->unsubscribe( reset_data_storage => 0 );
-      is ( 0+ $data->_has_shared_data_storage, 0, "data storage still separate" );
+            $data->unsubscribe( reset_data_storage => 0 );
+            is( 0 + $data->_has_shared_data_storage,
+                0, "data storage still separate" );
 
-      cmp_deeply( $data->unpdl,  $data->base->unpdl, "effective data == base data" );
-      cmp_deeply( $mask->unpdl,  $mask->base->unpdl, "effective mask == base mask" );
+            cmp_deeply( $data->unpdl, $data->base->unpdl,
+                "effective data == base data" );
+            cmp_deeply( $mask->unpdl, $mask->base->unpdl,
+                "effective mask == base mask" );
 
-      $data->set( 0, 3 );
-      cmp_deeply( $data->base->unpdl, [ 3, 1, 2, 0 ], "updated base data value" );
-      cmp_deeply( $data->unpdl,  $data->base->unpdl, "effective data == base data" );
-      cmp_deeply( $mask->unpdl,  $mask->base->unpdl, "effective mask == base mask" );
+            $data->set( 0, 3 );
+            cmp_deeply(
+                $data->base->unpdl,
+                [ 3, 1, 2, 0 ],
+                "updated base data value"
+            );
+            cmp_deeply( $data->unpdl, $data->base->unpdl,
+                "effective data == base data" );
+            cmp_deeply( $mask->unpdl, $mask->base->unpdl,
+                "effective mask == base mask" );
 
-      $mask->set( 0, 0 );
-      cmp_deeply( $mask->base->unpdl, [ 0, 0, 1, 1 ], "updated base mask value" );
-      cmp_deeply( $mask->unpdl,  $mask->base->unpdl, "effective mask == base mask" );
-      cmp_deeply( $data->unpdl,  $data->base->unpdl, "effective data == base data" );
+            $mask->set( 0, 0 );
+            cmp_deeply(
+                $mask->base->unpdl,
+                [ 0, 0, 1, 1 ],
+                "updated base mask value"
+            );
+            cmp_deeply( $mask->unpdl, $mask->base->unpdl,
+                "effective mask == base mask" );
+            cmp_deeply( $data->unpdl, $data->base->unpdl,
+                "effective data == base data" );
 
-  };
+        };
 
 
-  subtest "re-subscribe" => sub {
-      $data->subscribe;
+        subtest "re-subscribe" => sub {
+            $data->subscribe;
 
-      cmp_deeply( $mask->base->unpdl, [ 0, 0, 1, 1 ], "base mask value unchanged" );
-      cmp_deeply( $mask->unpdl,       [ 0, 0, 1, 0 ], "mask tracks data mask" );
+            cmp_deeply(
+                $mask->base->unpdl,
+                [ 0, 0, 1, 1 ],
+                "base mask value unchanged"
+            );
+            cmp_deeply( $mask->unpdl, [ 0, 0, 1, 0 ], "mask tracks data mask" );
 
-      cmp_deeply( $data->base->unpdl, [ 3, 1, 2, 0 ], "base data value unchanged" );
+            cmp_deeply(
+                $data->base->unpdl,
+                [ 3, 1, 2, 0 ],
+                "base data value unchanged"
+            );
 
-      cmp_deeply( $data->unpdl,       [ 0, 0, 2, 0 ], "effective data updated value" );
+            cmp_deeply(
+                $data->unpdl,
+                [ 0, 0, 2, 0 ],
+                "effective data updated value"
+            );
 
-  };
+        };
+
+    };
+
+    subtest "mask directed" => sub {
+
+        my $mask = PDLx::Mask->new( [ 0 ] );
+
+        my $data = PDLx::MaskedData->new( [ 1 ], $mask );
+
+	# yeah, this ain't public.
+	my $token = $data->_token;
+
+	$mask->unsubscribe( $token );
+
+	cmp_deeply( $data->unpdl, [ 1 ] , "data ignores mask after mask unsubscribes data" );
+
+    };
+
 
 };
 

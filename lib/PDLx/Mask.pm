@@ -140,19 +140,28 @@ sub subscribe {
     return $token;
 }
 
+sub is_subscriber {
+
+    my $self  = shift;
+    my $token = shift;
+
+    return defined $token && exists $self->subscribers->{$token};
+}
+
 sub unsubscribe {
 
     my $self  = shift;
     my $token = shift;
 
     croak( "passed invalid token" )
-      if !defined $token || !exists $self->subscribers->{$token};
+      unless $self->is_subscriber( $token );
 
-    my $data_mask = delete $self->subscribers->{$token}{data_mask};
+    my $cb = delete $self->subscribers->{$token};
 
-    delete $self->subscribers->{$token};
+    $cb->{apply_mask}->()
+      if $cb->{apply_mask};
 
-    $self->update if $data_mask;
+    $self->update if $cb->{data_mask};
 
     return;
 }
@@ -397,8 +406,11 @@ The following options are available:
 
 =item C<apply_mask> => I<code reference>
 
-This subroutine should take a single argument (a mask piddle) and
+This subroutine should expect a single argument (a mask piddle) and
 apply it.  It should I<not> alter the mask piddle.  It is optional.
+
+This callback will be invoked I<no> arguments if the mask has
+been directed to unsubscribe the callbacks. See L</unsubscribe>
 
 =item C<data_mask> => I<code reference>
 
@@ -417,12 +429,23 @@ L<< B<subscribe>|/subscribe >>.
 
 =back
 
+=head3 is_subscriber
+
+  $bool = $mask->is_subscriber( $token );
+
+Returns true if the passed token refers to an active subscriber.
+
 =head3 unsubscribe
 
   $mask->unsubscribe( $token );
 
-Unsubscribe the callacks with the given token (returned by L<<
+Unsubscribe the callbacks with the given token (returned by L<<
 B<subscribe>|/subscribe >>).
+
+If the callbacks for C<$token> include the C<apply_mask> callback, it
+will be invoked with no arguments, indicating that it is being
+unsubscribed. At that time C<< $mask->is_subscriber($token) >> will
+return I<false>.
 
 =head3 update
 

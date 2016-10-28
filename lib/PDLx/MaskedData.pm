@@ -254,9 +254,30 @@ sub _reset_effective_data_storage {
 sub is_subscribed {
 
     return $_[0]->has_mask && $_[0]->_has_token;
-    return $_[0]->has_mask;
 
 }
+
+sub _reset_subscription_status {
+
+    $_[0]->_clear_token;
+
+}
+
+sub _reset_subscription_state {
+
+    my $self = shift;
+    my $reset_data_storage = shift // 1;
+
+    $self->_reset_subscription_status;
+
+    $self->_reset_effective_data_storage
+      if $reset_data_storage;
+
+    $self->update;
+
+    return;
+}
+
 
 sub subscribe {
 
@@ -268,10 +289,34 @@ sub subscribe {
     # $self->base
     $self->_reset_effective_data_storage( 1 );
 
-    my $token = $self->mask->subscribe(
-        (
+    my $token = $self->mask->subscribe( (
             $self->apply_mask
-            ? ( apply_mask => sub { $self->_apply_mask( @_ ) } )
+            ? (
+                apply_mask => sub {
+
+                    return unless $self->is_subscribed;
+
+                    # if $mask is undef, we're being asked to unsubscribe
+                    if ( @_ == 0 || !defined $_[0] ) {
+
+                        # if mask has already unsubscribed us; don't
+                        # ask it to do it twice
+                        if ( $self->mask->is_subscriber( $self->_token ) ) {
+                            $self->unsubscribe;
+                        }
+
+                        # mask doesn't know about us. just clean up locally
+                        else {
+                            $self->_reset_subscription_state;
+                        }
+                    }
+                    else {
+                        $self->_apply_mask( @_ );
+                    }
+
+                    return;
+                },
+              )
             : (),
         ),
         (
@@ -302,13 +347,16 @@ sub unsubscribe {
     my $opts = check( $tmpl, {@_} )
       or die Params::Check::last_error();
 
-    $self->mask->unsubscribe( $self->_token );
-    $self->_clear_token;
+    # make sure $self doesn't think it's subscribed, in case
+    # $self->mask sends *us* an unsubscribe command via apply_mask
+    # when we call mask->unsuscribe method
+    my $token = $self->_token;
+    $self->_reset_subscription_status;
 
-    $self->_reset_effective_data_storage
-      if $opts->{reset_data_storage};
+    $self->mask->unsubscribe( $token );
 
-    $self->update;
+    # now perform a reset of all subscription related state
+    $self->_reset_subscription_state( $opts->{reset_data_storage} );
 
     return;
 }
