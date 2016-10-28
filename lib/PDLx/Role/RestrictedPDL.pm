@@ -6,6 +6,7 @@ use Carp;
 use PDL::Core ':Internal';
 use overload;
 
+our $VERSION = '0.03';
 
 my $_cant_mutate;
 

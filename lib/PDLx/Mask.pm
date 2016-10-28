@@ -27,7 +27,7 @@ use Carp;
 
 use v5.10;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Params::Check qw[ check ];
 use Ref::Util ':all';
