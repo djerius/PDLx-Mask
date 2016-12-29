@@ -1,4 +1,6 @@
-Revision history for PDLx-Mask
+Revision history for {{$dist->name}}
+
+{{$NEXT}}
 
 0.03	2016-10-28T13:45:54-0400
 

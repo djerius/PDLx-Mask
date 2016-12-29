@@ -1,3 +1,5 @@
+# ABSTRACT: restrict write access to a PDL object as much as possible
+
 package PDLx::Role::RestrictedPDL;
 
 use strictures 2;
@@ -29,15 +31,12 @@ sub set_inplace { goto $_cant_mutate unless @_ > 0 && $_[1] == 0 }
 
 1;
 
+# COPYRIGHT
 
 __END__
 
 
 =pod
-
-=head1 NAME
-
-PDLx::Role::RestrictedPDL -- restrict write access to a PDL object as much as possible
 
 =head1 SYNOPSIS
 
